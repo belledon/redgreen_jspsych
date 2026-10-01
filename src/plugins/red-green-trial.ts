@@ -15,9 +15,14 @@ import { JsPsych, JsPsychPlugin, ParameterType, TrialType } from "jspsych";
  *     boundaries and any solid rectangles.
  *
  * Trial-end response modes (choose one via `response_mode`):
- *   1. "empty" (default): the whole scene disappears; the subject sees the
- *      question (e.g. "Blue or Purple?") and responds with the keyboard.
- *   2. "localize": the scene stays; exactly one disc disappears, and the
+ *   1. "slider" (default): the whole scene disappears; the subject sees the
+ *      question (e.g. "Red or Green?") and answers with a 7-point confidence
+ *      slider, "Confident red" on the left end and "Confident green" on the
+ *      right. `response` is the slider value (0-6) and `response_label` its
+ *      mapped category ("r" for 0-2, "g" for 4-6, null at the midpoint 3).
+ *   2. "empty": the whole scene disappears; the subject sees the question and
+ *      responds with the keyboard (`choices`, default r/g).
+ *   3. "localize": the scene stays; exactly one disc disappears, and the
  *      subject clicks on the position where that disc was last seen. The
  *      click ends the trial with response = {x, y} in scene coordinates and
  *      `hidden_disc` records the true hidden-disc position for scoring.
@@ -40,18 +45,22 @@ import { JsPsych, JsPsychPlugin, ParameterType, TrialType } from "jspsych";
  *   onset time (t).
  *
  * Data written per trial:
- *   - rt, response (key or {x, y}), correct, response_mode, animation_duration
+ *   - rt, response (key, slider value, or {x, y}), correct, response_mode,
+ *     animation_duration; in slider mode also response_label ("r"/"g"/null),
+ *     slider_moved, slider_midpoint
  *   - first_collision_color ("r"/"g"/null), first_collision_time, first_collision_rect_index
  *   - probes (ground truth, see above) and probe_count
  *   - probe_response (timestamps of probe-key presses during the animation)
  *   - a full serialization of the scene (rectangles + discs), so the exact
  *     stimulus can be reconstructed from the data alone.
  *
- * Scoring: in empty mode the ground-truth answer is the color ("r" = red,
- * "g" = green) of the first solid colored rectangle a disc collides with
- * during the animation. The plugin tracks this in real time; if no colored
- * rect is ever hit, `correct` is null. The `correct_response` parameter is
- * treated as a fallback hint only (authored trials may still provide one).
+ * Scoring: in empty and slider modes the ground-truth answer is the color
+ * ("r" = red, "g" = green) of the first solid colored rectangle a disc
+ * collides with during the animation. The plugin tracks this in real time;
+ * if no colored rect is ever hit, `correct` is null. The `correct_response`
+ * parameter is treated as a fallback hint only (authored trials may still
+ * provide one). In slider mode the midpoint maps to response_label null, so
+ * `correct` is null for unsure responses.
  *
  * @author Mario Belledonne
  */
@@ -74,10 +83,38 @@ const info = <const>{
       type: ParameterType.INT,
       default: 4000,
     },
-    /** Trial-end response mode: "empty" (keyboard) or "localize" (click). */
+    /** Trial-end response mode: "slider" (default), "empty" (keyboard) or "localize" (click). */
     response_mode: {
       type: ParameterType.STRING,
-      default: "empty",
+      default: "slider",
+    },
+    /** Slider scale in slider mode: min, max, step (default 0-6). The midpoint
+     *  maps to response_label null ("unsure"); below it "r", above it "g". */
+    slider_range: {
+      type: ParameterType.INT,
+      array: true,
+      default: [0, 6],
+    },
+    /** Label shown at the left end of the slider. */
+    slider_label_left: {
+      type: ParameterType.HTML_STRING,
+      default: `<span style="color: red;">RED</span>`,
+    },
+    /** Label shown at the right end of the slider. */
+    slider_label_right: {
+      type: ParameterType.HTML_STRING,
+      default: `<span style="color: green;">GREEN</span>`,
+    },
+    /** Button label that confirms the slider response. */
+    slider_button_label: {
+      type: ParameterType.STRING,
+      default: "Submit",
+    },
+    /** If true, the Continue button stays disabled until the slider is moved
+     *  (mirrors jsPsych's slider-response `require_moved`). */
+    slider_require_moved: {
+      type: ParameterType.BOOL,
+      default: false,
     },
     /** Key(s) accepted as a response (characters or event.key names). */
     choices: {
@@ -766,7 +803,11 @@ class RedGreenTrialPlugin implements JsPsychPlugin<Info> {
     state: State,
     started: number,
   ): void {
-    const mode = trial.response_mode ?? "empty";
+    const mode = trial.response_mode ?? "slider";
+    if (mode === "slider") {
+      this.presentSliderQuestion(display_element, trial, state, started);
+      return;
+    }
     const wrapper = document.createElement("div");
     wrapper.id = "red-green-question";
     wrapper.style.textAlign = "center";
@@ -810,20 +851,7 @@ class RedGreenTrialPlugin implements JsPsychPlugin<Info> {
       // collided with. If none was hit, fall back to the authored hint (if any).
       const answer = state.firstCollision?.color ?? trial.correct_response ?? null;
       const correct = answer !== null ? key === answer : null;
-      const trial_data: Record<string, unknown> = {
-        rt,
-        response: key,
-        correct,
-        response_mode: mode,
-        animation_duration: Math.round(performance.now() - started),
-        first_collision_color: state.firstCollision?.color ?? null,
-        first_collision_time: state.firstCollision?.time ?? null,
-        first_collision_rect_index: state.firstCollision?.rect_index ?? null,
-        probes: state.probes,
-        probe_response: state.probe_response,
-        probe_count: state.probes.length,
-        scene: this.serializeScene(trial, state),
-      };
+      const trial_data = this.assembleTrialData(trial, state, started, rt, key, correct, mode);
       display_element.innerHTML = "";
       this.jsPsych.finishTrial(trial_data);
     };
@@ -900,33 +928,154 @@ class RedGreenTrialPlugin implements JsPsychPlugin<Info> {
       state.keydownHandler = null;
     }
     const hidden = state.hiddenDisc;
-    const trial_data: Record<string, unknown> = {
+    const trial_data: Record<string, unknown> = this.assembleTrialData(
+      trial, state, started, rt, { x: Math.round(x), y: Math.round(y) }, correct, "localize",
+    );
+    trial_data.hidden_disc = hidden
+      ? {
+          index: state.discs.indexOf(hidden),
+          x: Math.round(hidden.x),
+          y: Math.round(hidden.y),
+          radius: hidden.halfW,
+          color: hidden.color,
+          vx: hidden.vx,
+          vy: hidden.vy,
+        }
+      : null;
+    display_element.innerHTML = "";
+    this.jsPsych.finishTrial(trial_data);
+  }
+
+  /** Build the trial-data record shared by all response modes. */
+  private assembleTrialData(
+    trial: TrialType<Info>,
+    state: State,
+    started: number,
+    rt: number,
+    response: unknown,
+    correct: boolean | null,
+    mode: string,
+  ): Record<string, unknown> {
+    return {
       rt,
-      response: { x: Math.round(x), y: Math.round(y) },
+      response,
       correct,
-      response_mode: "localize",
+      response_mode: mode,
+      animation_duration: Math.round(performance.now() - started),
       first_collision_color: state.firstCollision?.color ?? null,
       first_collision_time: state.firstCollision?.time ?? null,
       first_collision_rect_index: state.firstCollision?.rect_index ?? null,
-      hidden_disc: hidden
-        ? {
-            index: state.discs.indexOf(hidden),
-            x: Math.round(hidden.x),
-            y: Math.round(hidden.y),
-            radius: hidden.halfW,
-            color: hidden.color,
-            vx: hidden.vx,
-            vy: hidden.vy,
-          }
-        : null,
-      animation_duration: Math.round(performance.now() - started),
       probes: state.probes,
       probe_response: state.probe_response,
       probe_count: state.probes.length,
       scene: this.serializeScene(trial, state),
     };
-    display_element.innerHTML = "";
-    this.jsPsych.finishTrial(trial_data);
+  }
+
+  /** Slider response mode: a 7-point confidence scale, "Confident red" on the
+   *  left end, "Confident green" on the right, Continue button to confirm.
+   *  Scoring: values below the midpoint map to "r", above to "g", the exact
+   *  midpoint maps to null ("unsure"), so `correct` is null there. */
+  private presentSliderQuestion(
+    display_element: HTMLElement,
+    trial: TrialType<Info>,
+    state: State,
+    started: number,
+  ): void {
+    const wrapper = document.createElement("div");
+    wrapper.id = "red-green-question";
+    wrapper.style.textAlign = "center";
+    wrapper.style.marginTop = "40px";
+
+    const h2 = document.createElement("h2");
+    h2.innerHTML = trial.prompt ?? "Red or Green?";
+    wrapper.appendChild(h2);
+
+    const [min, max] =
+      Array.isArray(trial.slider_range) && trial.slider_range.length === 2
+        ? (trial.slider_range as number[])
+        : [0, 6];
+    const mid = Math.round((min + max) / 2);
+
+    const scale = document.createElement("div");
+    scale.style.cssText = "margin:24px auto 0;max-width:520px;";
+
+    const labels = document.createElement("div");
+    labels.style.cssText =
+      "display:flex;justify-content:space-between;font-size:14px;color:#444;";
+    labels.innerHTML =
+      `<span>${trial.slider_label_left ?? "Confident red"}</span>` +
+      `<span>${trial.slider_label_right ?? "Confident green"}</span>`;
+    scale.appendChild(labels);
+
+    const input = document.createElement("input");
+    input.type = "range";
+    input.id = "red-green-slider";
+    input.min = String(min);
+    input.max = String(max);
+    input.step = "1";
+    input.value = String(mid);
+    input.style.cssText = "width:100%;margin-top:10px;";
+    scale.appendChild(input);
+
+    const ticks = document.createElement("div");
+    ticks.style.cssText =
+      "display:flex;justify-content:space-between;font-size:12px;color:#888;margin-top:2px;";
+    for (let v = min; v <= max; v++) {
+      const t = document.createElement("span");
+      t.textContent = String(v);
+      ticks.appendChild(t);
+    }
+    scale.appendChild(ticks);
+    wrapper.appendChild(scale);
+
+    const button = document.createElement("button");
+    button.textContent = trial.slider_button_label ?? "Continue";
+    button.id = "red-green-slider-btn";
+    button.className = "jspsych-btn";
+    button.style.marginTop = "24px";
+    if (trial.slider_require_moved) {
+      button.disabled = true;
+      input.addEventListener("input", () => {
+        button.disabled = false;
+      });
+    }
+    wrapper.appendChild(button);
+    display_element.appendChild(wrapper);
+
+    const start_time = performance.now();
+    const moved = { value: false };
+    input.addEventListener("input", () => {
+      moved.value = true;
+    });
+
+    const end_trial = () => {
+      state.ended = true;
+      if (state.raf !== null) {
+        cancelAnimationFrame(state.raf);
+        state.raf = null;
+      }
+      // Remove the probe-key listener (animation over).
+      if (state.keydownHandler) {
+        window.removeEventListener("keydown", state.keydownHandler);
+        state.keydownHandler = null;
+      }
+      const value = Number(input.value);
+      const label = value < mid ? "r" : value > mid ? "g" : null;
+      const rt = Math.round(performance.now() - start_time);
+      // Ground truth is the color of the first solid colored rectangle a disc
+      // collided with. If none was hit, fall back to the authored hint (if any).
+      const answer = state.firstCollision?.color ?? trial.correct_response ?? null;
+      const correct = answer !== null && label !== null ? label === answer : null;
+      const trial_data = this.assembleTrialData(trial, state, started, rt, value, correct, "slider");
+      (trial_data as Record<string, unknown>).response_label = label;
+      (trial_data as Record<string, unknown>).slider_moved = moved.value;
+      (trial_data as Record<string, unknown>).slider_midpoint = mid;
+      display_element.innerHTML = "";
+      this.jsPsych.finishTrial(trial_data);
+    };
+
+    button.addEventListener("click", end_trial);
   }
 
   private serializeScene(

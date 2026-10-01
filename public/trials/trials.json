@@ -1,126 +1,122 @@
 [
-  {
-    "type": "red-green-trial",
-    "rectangles": [
-      {
-        "x": 150,
-        "y": 150,
-        "width": 120,
-        "height": 80,
-        "color": "#FF7878",
-        "solid": true
-      },
-      {
-        "x": 400,
-        "y": 300,
-        "width": 120,
-        "height": 80,
-        "color": "#666666",
-        "solid": false
-      },
-      {
-        "x": 650,
-        "y": 480,
-        "width": 120,
-        "height": 80,
-        "color": "#78FF78",
-        "solid": true
-      }
-    ],
-    "discs": [
-      {
-        "x": 100,
-        "y": 100,
-        "radius": 14,
-        "color": "#2D90BA",
-        "vx": 120,
-        "vy": 90
-      },
-      {
-        "x": 300,
-        "y": 400,
-        "radius": 14,
-        "color": "#7B4FBF",
-        "vx": -100,
-        "vy": 80
-      }
-    ],
-    "duration": 4000,
-    "response_mode": "empty",
-    "choices": [
-      "r",
-      "g"
-    ],
-    "prompt": "Red or Green?",
-    "correct_response": "r",
-    "probe_interval": 2500,
-    "probe_duration": 100,
-    "probe_first_after": 1000,
-    "probe_target": "object",
-    "scene_width": 800,
-    "scene_height": 600
-  },
-  {
-    "type": "red-green-trial",
-    "rectangles": [
-      {
-        "x": 150,
-        "y": 150,
-        "width": 120,
-        "height": 80,
-        "color": "#000000",
-        "solid": true
-      },
-      {
-        "x": 400,
-        "y": 300,
-        "width": 120,
-        "height": 80,
-        "color": "#FF7878",
-        "solid": true
-      },
-      {
-        "x": 650,
-        "y": 480,
-        "width": 120,
-        "height": 80,
-        "color": "#78FF78",
-        "solid": true
-      }
-    ],
-    "discs": [
-      {
-        "x": 400,
-        "y": 300,
-        "radius": 14,
-        "color": "#7B4FBF",
-        "vx": -80,
-        "vy": 110
-      },
-      {
-        "x": 600,
-        "y": 450,
-        "radius": 14,
-        "color": "#7B4FBF",
-        "vx": 70,
-        "vy": -60
-      },
-      {
-        "x": 250,
-        "y": 500,
-        "radius": 14,
-        "color": "#2D90BA",
-        "vx": 90,
-        "vy": 40
-      }
-    ],
-    "duration": 4000,
-    "response_mode": "localize",
-    "choices": [],
-    "prompt": "Click on the missing disc",
-    "correct_response": null,
-    "probe_interval": 0,
-    "scene_width": 800,
-    "scene_height": 600
-  }
+    {
+        "type": "red-green-trial",
+        "rectangles": [
+            {
+                "x": 150,
+                "y": 150,
+                "width": 120,
+                "height": 80,
+                "color": "#FF7878",
+                "solid": true
+            },
+            {
+                "x": 400,
+                "y": 300,
+                "width": 120,
+                "height": 80,
+                "color": "#666666",
+                "solid": false
+            },
+            {
+                "x": 650,
+                "y": 480,
+                "width": 120,
+                "height": 80,
+                "color": "#78FF78",
+                "solid": true
+            }
+        ],
+        "discs": [
+            {
+                "x": 100,
+                "y": 100,
+                "radius": 14,
+                "color": "#2D90BA",
+                "vx": 120,
+                "vy": 90
+            },
+            {
+                "x": 300,
+                "y": 400,
+                "radius": 14,
+                "color": "#7B4FBF",
+                "vx": -100,
+                "vy": 80
+            }
+        ],
+        "duration": 4000,
+        "response_mode": "slider",
+        "slider_require_moved" : 1,
+        "prompt": "Red or Green?",
+        "probe_interval": 2500,
+        "probe_duration": 100,
+        "probe_first_after": 1000,
+        "probe_target": "object",
+        "scene_width": 800,
+        "scene_height": 600
+    },
+    {
+        "type": "red-green-trial",
+        "rectangles": [
+            {
+                "x": 150,
+                "y": 150,
+                "width": 120,
+                "height": 80,
+                "color": "#000000",
+                "solid": true
+            },
+            {
+                "x": 400,
+                "y": 300,
+                "width": 120,
+                "height": 80,
+                "color": "#FF7878",
+                "solid": true
+            },
+            {
+                "x": 650,
+                "y": 480,
+                "width": 120,
+                "height": 80,
+                "color": "#78FF78",
+                "solid": true
+            }
+        ],
+        "discs": [
+            {
+                "x": 400,
+                "y": 300,
+                "radius": 14,
+                "color": "#7B4FBF",
+                "vx": -80,
+                "vy": 110
+            },
+            {
+                "x": 600,
+                "y": 450,
+                "radius": 14,
+                "color": "#7B4FBF",
+                "vx": 70,
+                "vy": -60
+            },
+            {
+                "x": 250,
+                "y": 500,
+                "radius": 14,
+                "color": "#2D90BA",
+                "vx": 90,
+                "vy": 40
+            }
+        ],
+        "duration": 4000,
+        "response_mode": "localize",
+        "choices": [],
+        "prompt": "Click on the missing disc",
+        "correct_response": null,
+        "probe_interval": 0,
+        "scene_width": 800,
+        "scene_height": 600
+    }
 ]

@@ -57,6 +57,7 @@ function fromSpec(spec: LoadedTrial) {
  */
 async function buildTrialTimeline() {
     const loaded = await resolveTrialsSource();
+    console.log(loaded);
     if (loaded && loaded.length > 0) {
         // Deterministic: same trials for every subject, in file order.
         return loaded.map(fromSpec);
