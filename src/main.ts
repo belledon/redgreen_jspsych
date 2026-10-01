@@ -2,11 +2,12 @@ import { initJsPsych } from "jspsych";
 import PreloadPlugin from "@jspsych/plugin-preload";
 import FullscreenPlugin from "@jspsych/plugin-fullscreen";
 import SurveyTextPlugin from "@jspsych/plugin-survey-text";
+import InstructionsPlugin from "@jspsych/plugin-instructions";
 import SurveyMultiChoicePlugin from "@jspsych/plugin-survey-multi-choice";
 import HtmlButtonResponsePlugin from "@jspsych/plugin-html-button-response";
 import HtmlKeyboardResponsePlugin from "@jspsych/plugin-html-keyboard-response";
 
-import jatos from "./types/jatos";
+// import jatos from "./types/jatos";
 import RedGreenTrialPlugin from "./plugins/red-green-trial";
 import { generateScene, SceneConfig } from "./scenes";
 import { resolveTrialsSource, LoadedTrial } from "./trials/load";
@@ -15,9 +16,9 @@ import { resolveTrialsSource, LoadedTrial } from "./trials/load";
 // components). It is NOT auto-injected by the jsPsych package, so import it
 // explicitly, before our overrides so they can layer on top.
 import "jspsych/css/jspsych.css";
+import "@fontsource/literata/400.css";   // regular — body/instruction text
+import "@fontsource/literata/700.css";   // semibold — headings, response keys
 import "./styles/main.css";
-
-console.log(jatos)
 
 const jsPsych = initJsPsych({
     show_progress_bar: true,
@@ -32,6 +33,7 @@ const jsPsych = initJsPsych({
 });
 
 const N_TRIALS = 1;
+const EXP_DURATION = 5; // minutes for whole experiment
 const ANIMATION_DURATION_MS = 4000; // within the required 3-5 s window
 
 /**
@@ -95,37 +97,142 @@ function makeTrial(jsPsych: ReturnType<typeof initJsPsych>, idx: number) {
     };
 }
 
-const timeline: any[] = [
-    {
-        type: HtmlButtonResponsePlugin,
-        stimulus: `
+const timeline: any[] = [];
+
+// Consent
+// timeline.push({
+//     type: ExternalHtmlPlugin,
+//     url: "assets/consent.html",
+//     cont_btn: "start",
+//     check_fn: function () {
+//         if (document.getElementById("consent_checkbox").checked) {
+//             return true;
+//         } else {
+//             alert("You must tick the checkbox to continue with the study.");
+//         }
+//     },
+// });
+//
+//
+// Welcome screen
+timeline.push({
+    type: InstructionsPlugin,
+    pages: [
+        `
 <div class="intro-text">
-<h1>Red / Green Attention</h1>
-<p>You will see a short animation (3-5 s) with blue/purple discs moving
-among stationary rectangles. Some rectangles are solid (discs bounce off
-them); others are occluders (discs pass behind them). Discs are never
-red or green — the red/green signal comes from the rectangles.</p>
-<p>After each animation you will be asked either: <b>Red or Green?</b>
-(press <b>r</b> if a disc first collided with a <b>red</b> rectangle,
-<b>g</b> if it first collided with a <b>green</b> rectangle), or
-<b>Click on the missing disc</b> (one disc disappears and you click on the
-position where it was last seen).</p>
-<p>Sometimes a small white dot will flash briefly on one of the shapes during
-the animation. If you notice it, press the <b>space bar</b> as soon as you see
-it; a brief flash around the display will confirm your response. If you don't
-see it, do nothing.</p>
-<p>Respond as quickly and accurately as you can.</p>
+<h1>Hi, welcome to our study!</h1><br><br> 
+<p>Please take a moment to adjust your seating so that you can comfortably watch
+the monitor and use the keyboard/mouse.</p>
+<p>Feel free to dim the lights as well.  
+Close the door or do whatever is necessary to minimize disturbance during the
+experiment.</p>
+<p>Please also take a moment to silence your phone so that you are not
+interrupted by any messages mid-experiment.</p>
+<center>Click <b>Next</b> when you are ready to calibrate your display.</center>
 </div>
 `,
-        choices: ["Start"],
+    ],
+    show_clickable_nav: true,
+    allow_backward: false,
+    data: {
+        type: "welcome",
     },
-    { type: FullscreenPlugin, fullscreen_mode: true },
-];
+});
+
+
+// Switch to fullscreen
+timeline.push({
+    type: FullscreenPlugin,
+    fullscreen_mode: true,
+});
+
+
+const instruct_tl: any[] = [];
+
+
+instruct_tl.push(
+    {
+        type: InstructionsPlugin,
+        pages: [
+            `
+<div class="intro-text">
+<h1>Instructions</h1>
+<p>The study is designed to be <i>challenging</i>.<p>
+<p>Sometimes, you'll be certain about what you saw.<br>
+Other times, you won't be -- and this is okay!</p>
+<p>Just give your best guess each time.</p>
+<center>Click <b>Next</b> to continue.</center>
+</div>
+`,
+            `
+<div class="intro-text">
+<h1>Instructions</h1>
+<p>We know it is also difficult to stay focused for so long -
+especially when you are doing the same thing over and over.<p>
+<p>But remember, the experiment will be all over in less than ${EXP_DURATION}
+minutes. There are only <strong>${N_TRIALS} trials</strong> in this study. </p>
+<p>Please do your best to remain focused! Your responses will only be useful
+to us if you remain focused.</p>
+<center>Click <b>Next</b> to continue.</center>
+</div>
+`,
+            `
+<div class="intro-text">
+<h1>Instructions</h1>
+<p>You will see a short animation of discs bouncing around an arena containing
+<span style="color: red;">RED</span>, <span style="color: green;">GREEN</span>,
+or <b>BLACK</b> rectangles.</p>
+<center>Click <b>Next</b> to see an example.</center>
+</div>
+`,
+            `
+<div class="intro-text">
+<h1>Instructions</h1>
+<p>Your primary task is to determine whether any disc will first hit a <span
+style="color: red;">red</span> or <span style="color: green;">green</span>
+rectangle.</p>
+<p>At the end of the animation, and you will respond with a slider. If you are
+confident that <spanstyle="color: red;">red</span> will be first, place the
+slider all the way to the <b>LEFT</b>. If you are confident that
+<spanstyle="color: green;">red</span> will be first, place the slider all the
+way to the <b>RIGHT</b>. If you are unsure, just make your best guess and place
+the slider closer to the middle</p>
+<center>Click <b>Next</b> to give it a try</center>
+</div>
+`,
+`
+<div class="intro-text">
+<h1>Instructions</h1>
+<p>In addition to your primary task of Red-Green judgements, you may also be
+asked to detect small white discs that briefly appear in the scene.</p>
+<p>If and when you happen to notice a disc, please press the SPACE bar shortly
+after. The small discs are very hard to see; it is ok if you don't notice them.
+<center>Click <b>Next</b> to give it a try</center>
+</p>
+</div>
+`,
+`
+<div class="intro-text">
+<h1>Instructions</h1>
+<p>Finally, one of the discs may disappear at the end of the animation.</p>
+<p>If this happens, please use your mouse to click where the last position
+of the missing object.
+</p>
+<center>Click <b>Next</b> to give it a try</center>
+</div>
+`,
+        ],
+        show_clickable_nav: true,
+        allow_backward: false,
+    }
+);
+
+timeline.push(instruct_tl);
 
 const trial_timeline = await buildTrialTimeline();
 timeline.push(...trial_timeline);
 
-const debrief = {
+const comments = {
     type: SurveyTextPlugin,
     questions: [
         {
@@ -135,7 +242,7 @@ const debrief = {
         },
     ],
 };
-timeline.push(debrief);
+timeline.push(comments);
 
 const debriefing = {
     type: HtmlKeyboardResponsePlugin,
