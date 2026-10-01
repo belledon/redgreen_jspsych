@@ -1,0 +1,29 @@
+{
+  "name": "redgreen-attention",
+  "version": "0.1.0",
+  "description": "Sustained-attention psychophysics: moving discs (red/green) bounce through a field of rectangles that are either solid (colliding) or occluding.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "jatos": "node scripts/jatos.mjs"
+  },
+  "packageManager": "pnpm@10.33.2",
+  "dependencies": {
+    "@jspsych/plugin-fullscreen": "^2.1.0",
+    "@jspsych/plugin-html-button-response": "^2.1.0",
+    "@jspsych/plugin-html-keyboard-response": "^2.2.0",
+    "@jspsych/plugin-preload": "^2.1.0",
+    "@jspsych/plugin-survey-multi-choice": "^2.2.1",
+    "@jspsych/plugin-survey-text": "^2.1.1",
+    "jspsych": "^8.3.0"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
+  }
+}
