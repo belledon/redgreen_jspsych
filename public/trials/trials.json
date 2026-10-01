@@ -49,6 +49,7 @@
         "response_mode": "slider",
         "slider_require_moved" : 1,
         "prompt": "Red or Green?",
+        "correct_response": "r",
         "probe_interval": 2500,
         "probe_duration": 100,
         "probe_first_after": 1000,
