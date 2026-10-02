@@ -153,7 +153,6 @@ timeline.push({
 
 const instruct_tl: any[] = [];
 
-
 instruct_tl.push(
     {
         type: InstructionsPlugin,
@@ -269,7 +268,87 @@ of the missing object.
 
 instruct_tl.push(TRIALS[3]);
 
-timeline.push(instruct_tl);
+// comprehension check
+const comp_check = {
+    type: SurveyMultiChoicePlugin,
+    preamble:
+    "<h2>Comprehension Check</h2> " +
+        "<p> Before beginning the experiment, you must answer a few simple questions to ensure that the instructions are clear." +
+        "<br> If you do not answer all questions correctly, you will be returned to the start of the instructions.</p>",
+    questions: [
+        {
+            prompt: "Which of the following is <b>TRUE</b>",
+            name: "check1",
+            options: [
+                `A) When discs are moving, you should click on your favorite`,
+                `B) The primary task is to predict Red or Green`,
+                "C) Only respond if you are 100% sure about the answer",
+            ],
+            required: true,
+        },
+        {
+            prompt: " Which of the following statements is <b>FALSE</b>:",
+            name: "check2",
+            options: [
+                "A) It is ok if you miss the dots",
+                "B) To move on to the next trial, you must click the slider if present",
+                "C) You can move objects with your mouse",
+            ],
+            required: true,
+        },
+    ],
+    randomize_question_order: false,
+    on_finish: function (data) {
+        const q1 = data.response.check1[0];
+        const q2 = data.response.check2[0];
+        // both comp checks must pass
+        data.correct = q1 == "B" && q2 == "C";
+    },
+    data: {
+        type: "comp_quiz",
+    },
+};
+
+// feedback
+const comp_feedback = {
+    type: HtmlButtonResponsePlugin,
+    stimulus: () => {
+        var last_correct_resp = jsPsych.data
+            .getLastTrialData()
+            .values()[0].correct;
+        var msg;
+        if (last_correct_resp) {
+            msg =
+                "<h2><span style='color:green'>You passed the comprehension check!</span>" +
+                "<br>When you're ready, please click <b>Next</b> to begin the study. </h2>";
+        } else {
+            msg =
+                "<h2><span style='color:red'>You failed to respond <b>correctly</b> to all" +
+                " parts of the comprehension check.</span>" +
+                "<br>Please click <b>Next</b> to revisit the instructions.</h2>";
+        }
+        return msg;
+    },
+    choices: ["Next"],
+    data: {
+        // add any additional data that needs to be recorded here
+        type: "comp_feedback",
+    },
+};
+
+// `comp_loop`: if answers are incorrect, `comp_check` will be repeated until answers are correct responses
+const comp_loop = {
+    timeline: [...instruct_tl, comp_check, comp_feedback],
+    loop_function: function (data) {
+        // return false if comprehension passes to break loop
+        // HACK: changing `timeline` will break this
+        const vals = data.values();
+        const quiz = vals[vals.length - 2];
+        return !quiz.correct;
+    },
+};
+
+timeline.push(comp_loop);
 
 timeline.push(TRIALS);
 
