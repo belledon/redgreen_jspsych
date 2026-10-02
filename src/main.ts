@@ -205,9 +205,9 @@ the slider closer to the middle</p>
 <div class="intro-text">
 <h1>Instructions</h1>
 <p>In addition to your primary task of Red-Green judgements, you may also be
-asked to detect small white discs that briefly appear in the scene.</p>
-<p>If and when you happen to notice a disc, please press the SPACE bar shortly
-after. The small discs are very hard to see; it is ok if you don't notice them.
+asked to detect small white dots that briefly appear in the scene.</p>
+<p>If and when you happen to notice a dot, please press the SPACE bar shortly
+after. The small dots are very hard to see; it is ok if you don't notice them.
 <center>Click <b>Next</b> to give it a try</center>
 </p>
 </div>

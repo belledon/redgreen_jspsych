@@ -124,7 +124,7 @@ const info = <const>{
     /** Question shown after the animation closes (empty mode). */
     prompt: {
       type: ParameterType.HTML_STRING,
-      default: "Red or Green?",
+      default: "Which will be first?",
     },
     /** Correct response; if provided, `correct` is computed. */
     correct_response: {
