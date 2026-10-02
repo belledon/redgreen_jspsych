@@ -78,7 +78,7 @@ function makeTrial(jsPsych: ReturnType<typeof initJsPsych>, idx: number) {
     const scene = generateScene(config);
     // Alternate trial-end response modes: even trials are keyboard
     // (blue/purple), odd trials are localization (click on the missing disc).
-    const responseMode = idx % 2 === 0 ? "empty" : "localize";
+    const responseMode = idx % 2 === 0 ? "keyboard" : "localize";
     return {
         type: RedGreenTrialPlugin,
         rectangles: scene.rectangles,
@@ -97,6 +97,9 @@ function makeTrial(jsPsych: ReturnType<typeof initJsPsych>, idx: number) {
         scene_height: 600,
     };
 }
+
+
+const TRIALS = await buildTrialTimeline();
 
 const timeline: any[] = [];
 
@@ -185,7 +188,18 @@ to us if you remain focused.</p>
 or <b>BLACK</b> rectangles.</p>
 <center>Click <b>Next</b> to see an example.</center>
 </div>
-`,
+`,        ],
+        show_clickable_nav: true,
+        allow_backward: false,
+    }
+);
+
+instruct_tl.push(TRIALS[0]);
+
+instruct_tl.push(
+    {
+        type: InstructionsPlugin,
+        pages: [
             `
 <div class="intro-text">
 <h1>Instructions</h1>
@@ -201,6 +215,18 @@ the slider closer to the middle</p>
 <center>Click <b>Next</b> to give it a try</center>
 </div>
 `,
+        ],
+        show_clickable_nav: true,
+        allow_backward: false,
+    }
+);
+
+instruct_tl.push(TRIALS[1]);
+
+instruct_tl.push(
+    {
+        type: InstructionsPlugin,
+        pages: [
 `
 <div class="intro-text">
 <h1>Instructions</h1>
@@ -212,6 +238,19 @@ after. The small dots are very hard to see; it is ok if you don't notice them.
 </p>
 </div>
 `,
+        ],
+        show_clickable_nav: true,
+        allow_backward: false,
+    }
+);
+
+
+instruct_tl.push(TRIALS[2]);
+
+instruct_tl.push(
+    {
+        type: InstructionsPlugin,
+        pages: [
 `
 <div class="intro-text">
 <h1>Instructions</h1>
@@ -228,10 +267,11 @@ of the missing object.
     }
 );
 
+instruct_tl.push(TRIALS[3]);
+
 timeline.push(instruct_tl);
 
-const trial_timeline = await buildTrialTimeline();
-timeline.push(...trial_timeline);
+timeline.push(TRIALS);
 
 const comments = {
     type: SurveyTextPlugin,

@@ -51,8 +51,8 @@ Registered like any jsPsych plugin. Key parameters:
 | `rectangles`         | Array   | `[]`           | `{x, y, width, height, color, solid}`               |
 | `discs`              | Array   | `[]`           | `{x, y, radius, color, vx, vy}`                     |
 | `duration`           | Int     | `4000`         | Animation length in ms (3–5 s)                      |
-| `response_mode`      | String  | `"empty"`      | `"empty"` (keyboard) or `"localize"` (click)       |
-| `choices`            | Keys    | `["r","g"]`    | Accepted response keys (empty mode)                 |
+| `response_mode`      | String  | `"slider"`     | `"slider"`, `"keyboard"`, `"animate"` or `"localize"` |
+| `choices`            | Keys    | `["r","g"]`    | Accepted response keys (keyboard mode)              |
 | `prompt`             | String  | `Red or Green?`| Question text                                       |
 | `correct_response`   | String  | —              | Authored hint; the plugin scores the real first-collision color |
 | `scene_width`/`height`| Int    | 800 / 600      | Scene dimensions                                    |
@@ -67,7 +67,11 @@ Registered like any jsPsych plugin. Key parameters:
 
 ### Response modes
 
-- **`"empty"` (default)** — After the animation, the whole scene disappears and
+- **`"slider"` (default)** — After the animation, the whole scene disappears and
+  the subject answers on a confidence slider ("Confident red" … "Confident
+  green"). Data: `response` is the slider value, plus `response_label`
+  ("r"/"g"/null), `slider_moved` and `slider_midpoint`.
+- **`"keyboard"`** — After the animation, the whole scene disappears and
   the subject sees the prompt (e.g. “Red or Green?”). They respond with a
   keyboard key. Data: `response` is the key, `correct` is computed against the
   first colored-rect collision the plugin tracked (`first_collision_color`),
@@ -76,6 +80,8 @@ Registered like any jsPsych plugin. Key parameters:
   the subject clicks on the position where that disc was last seen. The click
   ends the trial. Data: `response` is `{x, y}` in scene coordinates, and
   `hidden_disc` records the true hidden disc position/color for scoring.
+- **`"animate"`** — No response is collected. When the animation ends the trial
+  finishes immediately: `response` null, `rt` null, `correct` null.
 
 ### Runtime probes
 
@@ -161,7 +167,7 @@ A JSON **array**, one object per trial:
                      { "x": 650, "y": 480, "width": 120, "height": 80, "color": "#78FF78", "solid": true } ],
     "discs":     [ { "x": 100, "y": 100, "radius": 14, "color": "#2D90BA", "vx": 120, "vy": 90 } ],
     "duration": 4000,
-    "response_mode": "empty",
+    "response_mode": "keyboard",
     "choices": ["r", "g"],
     "prompt": "Red or Green?",
     "correct_response": "r",

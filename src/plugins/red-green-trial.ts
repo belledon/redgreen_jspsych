@@ -20,12 +20,15 @@ import { JsPsych, JsPsychPlugin, ParameterType, TrialType } from "jspsych";
  *      slider, "Confident red" on the left end and "Confident green" on the
  *      right. `response` is the slider value (0-6) and `response_label` its
  *      mapped category ("r" for 0-2, "g" for 4-6, null at the midpoint 3).
- *   2. "empty": the whole scene disappears; the subject sees the question and
- *      responds with the keyboard (`choices`, default r/g).
+ *   2. "keyboard": the whole scene disappears; the subject sees the question
+ *      and responds with the keyboard (`choices`, default r/g).
  *   3. "localize": the scene stays; exactly one disc disappears, and the
  *      subject clicks on the position where that disc was last seen. The
  *      click ends the trial with response = {x, y} in scene coordinates and
  *      `hidden_disc` records the true hidden-disc position for scoring.
+ *   4. "animate": no response is collected. The scene disappears when the
+ *      animation ends and the trial finishes immediately, with `response`
+ *      null and `rt` null.
  *
  * Optional runtime probes (enabled when `probe_interval` > 0):
  *   During the animation, a small white disc (~1/3 the size of a normal
@@ -45,7 +48,8 @@ import { JsPsych, JsPsychPlugin, ParameterType, TrialType } from "jspsych";
  *   onset time (t).
  *
  * Data written per trial:
- *   - rt, response (key, slider value, or {x, y}), correct, response_mode,
+ *   - rt, response (key, slider value, {x, y}, or null in animate mode),
+ *     correct, response_mode,
  *     animation_duration; in slider mode also response_label ("r"/"g"/null),
  *     slider_moved, slider_midpoint
  *   - first_collision_color ("r"/"g"/null), first_collision_time, first_collision_rect_index
@@ -54,7 +58,7 @@ import { JsPsych, JsPsychPlugin, ParameterType, TrialType } from "jspsych";
  *   - a full serialization of the scene (rectangles + discs), so the exact
  *     stimulus can be reconstructed from the data alone.
  *
- * Scoring: in empty and slider modes the ground-truth answer is the color
+ * Scoring: in keyboard and slider modes the ground-truth answer is the color
  * ("r" = red, "g" = green) of the first solid colored rectangle a disc
  * collides with during the animation. The plugin tracks this in real time;
  * if no colored rect is ever hit, `correct` is null. The `correct_response`
@@ -83,7 +87,8 @@ const info = <const>{
       type: ParameterType.INT,
       default: 4000,
     },
-    /** Trial-end response mode: "slider" (default), "empty" (keyboard) or "localize" (click). */
+    /** Trial-end response mode: "slider" (default), "keyboard", "localize"
+     *  (click) or "animate" (no response collected). */
     response_mode: {
       type: ParameterType.STRING,
       default: "slider",
@@ -121,7 +126,7 @@ const info = <const>{
       type: ParameterType.KEYS,
       default: ["r", "g"],
     },
-    /** Question shown after the animation closes (empty mode). */
+    /** Question shown after the animation closes (keyboard mode). */
     prompt: {
       type: ParameterType.HTML_STRING,
       default: "Which will be first?",
@@ -764,7 +769,7 @@ class RedGreenTrialPlugin implements JsPsychPlugin<Info> {
       scene.style.boxShadow = "";
     }
     state.flashStart = null;
-    const mode = trial.response_mode ?? "empty";
+    const mode = trial.response_mode ?? "slider";
     if (mode === "localize") {
       // Keep the scene (minus the hidden disc) on screen for clicking.
       state.hiddenDisc = this.hideOneDisc(state);
@@ -789,12 +794,34 @@ class RedGreenTrialPlugin implements JsPsychPlugin<Info> {
     state: State,
     started: number,
   ): void {
-    const mode = trial.response_mode ?? "empty";
+    const mode = trial.response_mode ?? "slider";
     if (mode === "localize") {
       this.presentLocalizeQuestion(display_element, trial, state, started);
       return;
     }
+    if (mode === "animate") {
+      this.finishAnimate(display_element, trial, state, started);
+      return;
+    }
     this.presentEmptyQuestion(display_element, trial, state, started);
+  }
+
+  /** "animate" mode: no response is collected; end the trial as soon as the
+   *  animation closes. `response` and `rt` are null, `correct` is null. */
+  private finishAnimate(
+    display_element: HTMLElement,
+    trial: TrialType<Info>,
+    state: State,
+    started: number,
+  ): void {
+    // Remove the probe-key listener (animation over).
+    if (state.keydownHandler) {
+      window.removeEventListener("keydown", state.keydownHandler);
+      state.keydownHandler = null;
+    }
+    const trial_data = this.assembleTrialData(trial, state, started, null, null, null, "animate");
+    display_element.innerHTML = "";
+    this.jsPsych.finishTrial(trial_data);
   }
 
   private presentEmptyQuestion(
@@ -951,7 +978,7 @@ class RedGreenTrialPlugin implements JsPsychPlugin<Info> {
     trial: TrialType<Info>,
     state: State,
     started: number,
-    rt: number,
+    rt: number | null,
     response: unknown,
     correct: boolean | null,
     mode: string,

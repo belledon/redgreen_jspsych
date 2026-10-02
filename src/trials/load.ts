@@ -47,7 +47,7 @@ export type TrialSpec = {
   rectangles?: Rect[];
   discs?: Disc[];
   duration?: number;
-  response_mode?: "slider" | "empty" | "localize";
+  response_mode?: "slider" | "keyboard" | "animate" | "localize";
   choices?: string[];
   slider_range?: number[];
   slider_label_left?: string;
@@ -102,7 +102,7 @@ export function validateTrial(spec: TrialSpec): void {
   if (!Array.isArray(spec.discs) || spec.discs.length === 0) {
     throw new Error("trial spec missing `discs` (non-empty array of discs)");
   }
-  if (spec.response_mode && !["slider", "empty", "localize"].includes(spec.response_mode)) {
+  if (spec.response_mode && !["slider", "keyboard", "animate", "localize"].includes(spec.response_mode)) {
     throw new Error(`invalid response_mode "${spec.response_mode}"`);
   }
   if (spec.response_mode === "slider") {
